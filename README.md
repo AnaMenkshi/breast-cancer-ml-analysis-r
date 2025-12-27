@@ -18,8 +18,7 @@ To build, evaluate, and compare multiple supervised machine learning models for 
 - 33 numeric predictors  
 - Target variable: `diagnosis` (B / M)
 - Download link: https://www.kaggle.com/datasets/khansaafreen/breastdataset
-Note: After downloading, place the CSV file at data/ (and update the path in your R script accordingly).
-
+Note: After downloading, place the CSV file in the data/ folder, and update the file path in your R script
 
 
 
@@ -62,7 +61,8 @@ Models are evaluated using:
 ##  How to Run
 1. Open the `.Rmd` file in RStudio  
 2. Ensure `data/data.csv` is available on your local machine and update the file path in the R script to match your local directory
-4. Knit the document to HTML  
+4. Knit the document to HTML
+   
 
 
 
@@ -70,3 +70,6 @@ Models are evaluated using:
 **Ana Menkshi**
 
 
+
+## Disclaimer: 
+**The analyses and models in this project are for analytical and demonstration purposes only and are not intended for clinical use.**
