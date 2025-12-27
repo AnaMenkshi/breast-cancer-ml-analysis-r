@@ -6,24 +6,22 @@ It includes **data cleaning, exploratory data analysis (EDA), feature scaling, p
 
 The full workflow is implemented using **R Markdown** and provided as both `.Rmd` and rendered `.html` reports.
 
----
 
 ## Objective
 To build, evaluate, and compare multiple supervised machine learning models for accurate breast cancer prediction using numerical tumor features.
 
----
+
 
 ## Dataset
 - Breast Cancer Wisconsin (Diagnostic) Dataset  
 - 569 observations  
 - 33 numeric predictors  
 - Target variable: `diagnosis` (B / M)
+- Download link: https://www.kaggle.com/datasets/khansaafreen/breastdataset
+Note: After downloading, place the CSV file at data/ (and update the path in your R script accordingly).
 
-Location:  https://www.kaggle.com/datasets/khansaafreen/breastdataset
 
 
-
----
 
 ## Methods
 - Data cleaning and preprocessing
@@ -36,7 +34,7 @@ Location:  https://www.kaggle.com/datasets/khansaafreen/breastdataset
   - Decision Tree
   - Random Forest
 
----
+
 
 ##  Model Evaluation
 Models are evaluated using:
@@ -51,25 +49,24 @@ Models are evaluated using:
 - Accuracy ≈ **96.5%**  
 - Sensitivity = **100%**
 
----
 
 
----
+
 
 ##  Reports
 - `reports/breast_cancer.Rmd`
 - `reports/breast.html`
 
----
+
 
 ##  How to Run
 1. Open the `.Rmd` file in RStudio  
 2. Ensure `data/data.csv` is available on your local machine and update the file path in the R script to match your local directory
 4. Knit the document to HTML  
 
----
+
 
 ## Author
 **Ana Menkshi**
 
----
+
