@@ -1,0 +1,613 @@
+### Title: "Breast Cancer Data Analysis, Cleaning, Modeling & Prediction."
+
+
+
+# STEP 0 - REQUIRED LIBRARIES 
+
+
+## Install Libraries that we may need during workflow
+```{r}
+#install.packages(c("tidyverse","randomForest", "e1071", 
+                  # "class", "rpart", "rpart.plot", "pROC"))
+
+#install.packages(c("recipes", "ggplot2", "lattice", "Matrix"))
+
+```
+
+
+## Load libraries
+
+```{r}
+#install.packages("corrplot")
+library(corrplot)
+
+```
+
+
+```{r}
+library(tidyverse)
+library(randomForest)
+library(e1071)
+library(class)
+library(rpart)
+library(rpart.plot)
+library(pROC)
+
+```
+
+
+# STEP 1 - LOAD THE DATA
+
+```{r}
+# ADJUST the path to your own
+data <- read.csv("C:/Users/Ana/Downloads/data.csv", stringsAsFactors = TRUE)
+
+```
+
+## View structure
+
+```{r}
+str(data)
+
+```
+
+
+## First few rows
+
+```{r}
+head(data)
+
+```
+
+
+## Ensure target variable is factor
+
+```{r}
+data$diagnosis <- as.factor(data$diagnosis)
+
+```
+
+# STEP 2 — QUICK DATA CHECK
+
+```{r}
+# Class distribution
+
+table(data$diagnosis)
+
+
+```
+
+```{r}
+# No missing values expected
+
+sum(is.na(data))
+colSums(is.na(data))
+
+```
+
+
+
+# STEP 3 — DATA CLEANING
+
+Dataset is already clean (no NAs), but remove unwanted columns if present.
+
+-Let's just recheck the names of the columns and see if it is anything suspicious!
+
+```{r}
+colnames(data)
+
+```
+
+
+```{r}
+summary(data$X)
+
+```
+
+
+```{r}
+data <- data[, colnames(data) != "X"]
+
+
+```
+
+
+```{r}
+# Drop ID, because we do not need it!
+
+if ("id" %in% names(data)) {
+data <- data %>% select(-id)
+}
+
+
+```
+
+
+
+
+
+
+
+```{r}
+# Ensure target is factor
+
+data$diagnosis <- as.factor(data$diagnosis)
+
+summary(data$diagnosis)
+```
+So here we realise the number of each category of the type of breast cancer.
+
+
+
+
+
+
+# STEP 4 — EXPLORATORY DATA ANALYSIS (EDA)
+
+## Summary statistics
+```{r}
+summary(data)
+
+```
+
+
+
+## Correlation Matrix will help us define the relations between our variables.
+
+
+```{r}
+#install.packages("ggcorrplot")
+library(ggcorrplot)
+
+```
+
+
+
+```{r fig.width=14, fig.height=14}
+
+
+cor_matrix <- cor(data %>% select(-diagnosis))
+
+ggcorrplot(
+  cor_matrix,
+  method = "square",
+  type = "lower",
+  lab = TRUE,
+  lab_size = 3.5,                    # bigger numbers
+  colors = c("#6D9EC1", "white", "#E46726"),
+  outline.color = "grey40",
+  tl.cex = 12,                       # bigger axis labels
+  tl.srt = 45,                       # rotate axis labels
+  tl.col = "black",
+  ggtheme = ggplot2::theme_minimal(base_size = 14)
+)
+
+
+```
+
+
+## Interpretation of the Correlation Matrix 
+
+1. Size-Related Features — Extremely Strong Positive Correlation (0.95–0.99)
+
+Variables: radius_mean, perimeter_mean, area_mean and their _worst versions.
+
+These features measure tumor size, which is geometrically linked (larger radius → larger perimeter → larger area).
+➡ We can treat these variables as redundant and keep only one representative from this size cluster.
+
+2. Shape Irregularity Features — Strong Positive Correlation (0.80–0.90)
+
+Variables: concave.points_mean, concavity_mean, compactness_mean, and their _se and _worst versions.
+
+These quantify tumor border irregularity.
+➡ They carry overlapping information, so we should keep only one key variable from this shape-related cluster.
+
+3. Mean vs. Worst Correlations — Very High Overlap
+
+Examples:
+
+radius_mean ↔ radius_worst ≈ 0.97
+
+perimeter_mean ↔ perimeter_worst ≈ 0.99
+
+concave.points_mean ↔ concave.points_worst ≈ 0.85
+
+Worst values essentially mirror the mean values.
+➡ We likely do not need both mean and worst versions of each measurement.
+
+4. Weak or Negative Correlations — Independent Features
+
+Variables with weak/negative correlations:
+
+fractal_dimension_mean (−0.01 to −0.3)
+
+texture_mean (−0.2 to −0.3 with some _worst values)
+
+smoothness_se (small negatives)
+
+These do not follow size or shape patterns.
+➡ They provide independent signal and are useful to keep for prediction.
+
+5. SE Variables (Standard Errors) — Moderate Correlations (0.2–0.7)
+
+SE variables describe variability rather than size or shape.
+➡ They sit between clusters and add intermediate information.
+
+
+
+
+## Feature distributions
+
+```{r fig.width = 16, fig.height = 12}
+data %>%
+  gather(feature, value, -diagnosis) %>%
+  ggplot(aes(x = value, fill = diagnosis)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~feature, scales = "free") +
+  scale_y_continuous(
+    breaks = scales::pretty_breaks(n = 3),
+    expand = expansion(mult = c(0, 0.15))  
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.y  = element_text(size = 9),
+    axis.title.y = element_text(size = 11)
+  )
+
+
+```
+## Interpretation of the Density Plots
+
+Clear class separation is visible for size-related features (area, radius, perimeter), especially their _worst and _mean versions. Malignant tumors tend to have higher values and right-shifted distributions compared to benign ones.
+
+Shape irregularity features (concavity, concave points, compactness) also show strong discrimination, with malignant cases exhibiting larger and more variable values.
+
+Texture, smoothness, symmetry, and fractal dimension show greater overlap between classes, indicating weaker individual discriminative power.
+
+SE (standard error) features are highly skewed and overlap substantially, suggesting they contribute less on their own.
+
+
+## Conclusion
+
+Tumor size and border irregularity are the most informative features for distinguishing malignant from benign cases, while texture- and variability-based features provide secondary, complementary information.
+
+
+# STEP 5 — TRAIN / TEST SPLIT
+
+```{r}
+set.seed(123)
+
+# 80% training indices
+trainIndex <- sample(seq_len(nrow(data)), size = 0.8 * nrow(data))
+
+# Create training and testing sets
+trainData <- data[trainIndex, ]
+testData  <- data[-trainIndex, ]
+
+```
+
+
+# STEP 6 — FEATURE SCALING
+
+```{r}
+# Select only numeric predictors
+train_numeric <- trainData %>% select(-diagnosis)
+test_numeric  <- testData %>% select(-diagnosis)
+
+# Compute mean and sd from training data
+train_means <- apply(train_numeric, 2, mean)
+train_sds   <- apply(train_numeric, 2, sd)
+
+# Scale training data
+trainScaled <- as.data.frame(scale(train_numeric,
+                                   center = train_means,
+                                   scale = train_sds))
+
+# Scale testing data using TRAIN statistics
+testScaled <- as.data.frame(scale(test_numeric,
+                                  center = train_means,
+                                  scale = train_sds))
+
+# Add diagnosis back
+trainScaled$diagnosis <- trainData$diagnosis
+testScaled$diagnosis  <- testData$diagnosis
+
+
+```
+
+# STEP 7 — MODELING
+## A) Logistic Regression
+
+```{r}
+# A) Logistic Regression
+
+log_model <- glm(diagnosis ~ ., data = trainScaled, family = binomial)
+
+# Predicted probabilities
+pred_prob_log <- predict(log_model, newdata = testScaled, type = "response")
+
+# Convert to class labels
+pred_class_log <- ifelse(pred_prob_log > 0.5, "M", "B")
+
+# Convert predicted + actual to factors with same levels
+pred_class_log <- factor(pred_class_log, levels = c("B", "M"))
+actual_class   <- factor(testScaled$diagnosis, levels = c("B", "M"))
+
+# Confusion matrix (caret replacement)
+conf_matrix_log <- table(Predicted = pred_class_log,
+                         Actual = actual_class)
+
+conf_matrix_log
+
+
+```
+Only 4 benign samples were misclassified as malignant — small error.
+
+
+## Metrics to measure the performance of the model
+
+```{r}
+TP <- conf_matrix_log["M","M"]
+TN <- conf_matrix_log["B","B"]
+FP <- conf_matrix_log["M","B"]
+FN <- conf_matrix_log["B","M"]
+
+accuracy  <- (TP + TN) / sum(conf_matrix_log)
+sensitivity <- TP / (TP + FN)
+specificity <- TN / (TN + FP)
+precision <- TP / (TP + FP)
+f1_score <- 2 * (precision * sensitivity) / (precision + sensitivity)
+
+list(
+  Accuracy = accuracy,
+  Sensitivity = sensitivity,
+  Specificity = specificity,
+  Precision = precision,
+  F1_Score = f1_score
+)
+
+```
+Accuracy is very high: (57 + 53) / (57 + 0 + 4 + 53) = 110 / 114 ≈ 0.965 → 96.5%
+
+Sensitivity (Recall for M): TP / (TP + FN) = 53 / (53 + 0) = 1.0 → perfect recall for malignant
+
+Specificity (Recall for B): TN / (TN + FP) = 57 / (57 + 4) ≈ 0.934 → very good
+
+
+
+
+## B) KNN (k = 7)
+
+```{r}
+library(class)  # for knn
+
+# Set k
+k <- 7
+
+# KNN predictions
+knn_pred <- knn(
+  train = trainScaled[, -ncol(trainScaled)],
+  test  = testScaled[, -ncol(testScaled)],
+  cl    = trainScaled$diagnosis,
+  k     = k
+)
+
+# Convert to factors with same levels
+knn_pred <- factor(knn_pred, levels = c("B", "M"))
+actual_class <- factor(testScaled$diagnosis, levels = c("B", "M"))
+
+# Confusion matrix
+conf_matrix_knn <- table(Predicted = knn_pred, Actual = actual_class)
+conf_matrix_knn
+
+
+
+```
+```{r}
+TP <- conf_matrix_knn["M","M"]
+TN <- conf_matrix_knn["B","B"]
+FP <- conf_matrix_knn["M","B"]
+FN <- conf_matrix_knn["B","M"]
+
+accuracy  <- (TP + TN) / sum(conf_matrix_knn)
+sensitivity <- TP / (TP + FN)      # Recall for M
+specificity <- TN / (TN + FP)      # Recall for B
+precision   <- TP / (TP + FP)
+f1_score    <- 2 * (precision * sensitivity) / (precision + sensitivity)
+
+list(
+  Confusion_Matrix = conf_matrix_knn,
+  Accuracy = accuracy,
+  Sensitivity = sensitivity,
+  Specificity = specificity,
+  Precision = precision,
+  F1_Score = f1_score
+)
+
+```
+
+
+
+## C) Decision Tree
+
+```{r}
+library(rpart)
+library(rpart.plot)
+
+# Train decision tree
+tree_model <- rpart(diagnosis ~ ., data = trainScaled, method = "class")
+
+# Predict on test data
+tree_pred <- predict(tree_model, newdata = testScaled, type = "class")
+
+# Convert to factors with same levels
+tree_pred <- factor(tree_pred, levels = c("B", "M"))
+actual_class <- factor(testScaled$diagnosis, levels = c("B", "M"))
+
+# Confusion matrix
+conf_matrix_tree <- table(Predicted = tree_pred, Actual = actual_class)
+conf_matrix_tree
+
+
+
+
+```
+
+
+
+Metrics (Accuracy, Sensitivity, Specificity, Precision, F1)
+
+```{r}
+TP <- conf_matrix_tree["M","M"]
+TN <- conf_matrix_tree["B","B"]
+FP <- conf_matrix_tree["M","B"]
+FN <- conf_matrix_tree["B","M"]
+
+accuracy  <- (TP + TN) / sum(conf_matrix_tree)
+sensitivity <- TP / (TP + FN)        # Recall for M
+specificity <- TN / (TN + FP)        # Recall for B
+precision   <- TP / (TP + FP)
+f1_score    <- 2 * (precision * sensitivity) / (precision + sensitivity)
+
+list(
+  Confusion_Matrix = conf_matrix_tree,
+  Accuracy = accuracy,
+  Sensitivity = sensitivity,
+  Specificity = specificity,
+  Precision = precision,
+  F1_Score = f1_score
+)
+
+```
+
+
+
+## Tree plot
+
+```{r}
+
+rpart.plot(tree_model)
+```
+## Interpretation
+
+
+-Tumors with small perimeter, few concave points, small area, low texture mean → likely benign
+
+-Tumors with larger perimeter and more irregular concave points → likely malignant
+
+-The tree is fairly shallow, indicating a clear separation between B and M in our dataset.
+
+
+
+
+
+## D) Random Forest
+
+```{r}
+library(randomForest)
+
+# Train Random Forest
+rf_model <- randomForest(diagnosis ~ ., data = trainData, ntree = 300)
+
+# Predict on test data
+rf_pred <- predict(rf_model, newdata = testData)
+
+# Convert predicted + actual to factors with same levels
+rf_pred <- factor(rf_pred, levels = c("B", "M"))
+actual_class <- factor(testData$diagnosis, levels = c("B", "M"))
+
+# Confusion matrix
+conf_matrix_rf <- table(Predicted = rf_pred, Actual = actual_class)
+conf_matrix_rf
+
+```
+
+## Metrics (Accuracy, Sensitivity, Specificity, Precision, F1)
+
+```{r}
+TP <- conf_matrix_rf["M","M"]
+TN <- conf_matrix_rf["B","B"]
+FP <- conf_matrix_rf["M","B"]
+FN <- conf_matrix_rf["B","M"]
+
+accuracy  <- (TP + TN) / sum(conf_matrix_rf)
+sensitivity <- TP / (TP + FN)        # Recall for M
+specificity <- TN / (TN + FP)        # Recall for B
+precision   <- TP / (TP + FP)
+f1_score    <- 2 * (precision * sensitivity) / (precision + sensitivity)
+
+list(
+  Confusion_Matrix = conf_matrix_rf,
+  Accuracy = accuracy,
+  Sensitivity = sensitivity,
+  Specificity = specificity,
+  Precision = precision,
+  F1_Score = f1_score
+)
+
+```
+
+
+
+
+# STEP 8 — Comparing the results of each model
+
+```{r}
+get_metrics <- function(conf_matrix) {
+  TP <- conf_matrix["M","M"]
+  TN <- conf_matrix["B","B"]
+  FP <- conf_matrix["M","B"]
+  FN <- conf_matrix["B","M"]
+  
+  accuracy    <- (TP + TN) / sum(conf_matrix)
+  sensitivity <- TP / (TP + FN)   # Recall for M
+  specificity <- TN / (TN + FP)   # Recall for B
+  precision   <- TP / (TP + FP)
+  f1_score    <- 2 * (precision * sensitivity) / (precision + sensitivity)
+  
+  data.frame(
+    Accuracy = accuracy,
+    Sensitivity = sensitivity,
+    Specificity = specificity,
+    Precision = precision,
+    F1_Score = f1_score
+  )
+}
+
+```
+
+
+The comparison table
+
+```{r}
+model_metrics <- rbind(
+  Logistic_Regression = get_metrics(conf_matrix_log),
+  KNN_k7              = get_metrics(conf_matrix_knn),
+  Decision_Tree       = get_metrics(conf_matrix_tree),
+  Random_Forest       = get_metrics(conf_matrix_rf)
+)
+
+round(model_metrics, 3)
+
+```
+
+
+## Conclsion
+Logistic Regression achieved the best overall performance among all evaluated models.
+It provided the highest accuracy and perfect sensitivity, making it the most reliable model for detecting malignant tumors while maintaining interpretability.
+
+# STEP 9 — SAVE the best MODEL
+
+```{r}
+saveRDS(log_model, "logistic_model.rds")
+
+```
+
+
+
+
+
+
+
+
+
