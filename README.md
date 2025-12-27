@@ -77,7 +77,7 @@ breast-cancer-data-analysis/
 
 │   ├── breast_cancer.Rmd  
 
-│   └── breast.html  
+│   └── breast_cancer.html  
 
 │
 ├── .gitignore  
