@@ -64,7 +64,25 @@ Models are evaluated using:
 1. Open the `.Rmd` file in RStudio  
 2. Ensure `data/data.csv` is available on your local machine and update the file path in the R script to match your local directory
 4. Knit the document to HTML
-   
+
+
+
+## Repository  Structure
+breast-cancer-data-analysis/
+│
+├── reports/  
+
+│   ├── breast_cancer.Rmd  
+
+│   └── breast.html  
+
+│
+├── .gitignore  
+
+├── README.md  
+
+└── LICENSE  
+
 
 
 
