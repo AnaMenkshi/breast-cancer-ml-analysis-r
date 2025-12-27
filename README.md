@@ -1,2 +1,75 @@
-# breast-cancer-ml-analysis-r
-End-to-end breast cancer classification in R including data cleaning, exploratory data analysis, feature scaling, machine learning modeling, evaluation, and prediction.
+# Breast Cancer Data Analysis, Modeling & Prediction (R)
+
+##  Overview
+This project presents an **end-to-end machine learning workflow in R** for **breast cancer classification**.  
+It includes **data cleaning, exploratory data analysis (EDA), feature scaling, predictive modeling, and model evaluation** to classify tumors as **benign (B)** or **malignant (M)**.
+
+The full workflow is implemented using **R Markdown** and provided as both `.Rmd` and rendered `.html` reports.
+
+---
+
+## Objective
+To build, evaluate, and compare multiple supervised machine learning models for accurate breast cancer prediction using numerical tumor features.
+
+---
+
+## Dataset
+- Breast Cancer Wisconsin (Diagnostic) Dataset  
+- 569 observations  
+- 33 numeric predictors  
+- Target variable: `diagnosis` (B / M)
+
+Location:  https://www.kaggle.com/datasets/khansaafreen/breastdataset
+
+
+
+---
+
+## Methods
+- Data cleaning and preprocessing
+- Exploratory data analysis (summary statistics, correlations, feature distributions)
+- Train–test split (80/20)
+- Feature scaling
+- Machine learning models:
+  - Logistic Regression
+  - K-Nearest Neighbors (k = 7)
+  - Decision Tree
+  - Random Forest
+
+---
+
+##  Model Evaluation
+Models are evaluated using:
+- Confusion Matrix
+- Accuracy
+- Sensitivity
+- Specificity
+- Precision
+- F1 Score
+
+**Best performing model:** Logistic Regression  
+- Accuracy ≈ **96.5%**  
+- Sensitivity = **100%**
+
+---
+
+
+---
+
+##  Reports
+- `reports/breast_cancer.Rmd`
+- `reports/breast.html`
+
+---
+
+##  How to Run
+1. Open the `.Rmd` file in RStudio  
+2. Ensure `data/data.csv` is available on your local machine and update the file path in the R script to match your local directory
+4. Knit the document to HTML  
+
+---
+
+## Author
+**Ana Menkshi**
+
+---
